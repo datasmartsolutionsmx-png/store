@@ -1,0 +1,149 @@
+{% extends "core/base.html" %}
+{% block title %}Detalle corte #{{ corte.id }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 border-b-2 border-gray-200 pb-2">
+    <h2 class="text-3xl font-bold text-gray-800">Corte #{{ corte.id }}</h2>
+    <a href="{% url 'dashboard' %}" class="text-sm text-[#233b6e] hover:underline font-medium">
+        ← Dashboard
+    </a>
+</div>
+
+<!-- Info general -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <p class="text-xs text-gray-500 uppercase mb-1">Cajero</p>
+        <p class="text-lg font-bold text-gray-800">{{ corte.usuario.username }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <p class="text-xs text-gray-500 uppercase mb-1">Apertura</p>
+        <p class="text-lg font-bold text-gray-800">{{ corte.fecha_apertura|date:"d/m/Y H:i" }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow-md">
+        <p class="text-xs text-gray-500 uppercase mb-1">Cierre</p>
+        <p class="text-lg font-bold text-gray-800">
+            {% if corte.fecha_cierre %}{{ corte.fecha_cierre|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Resumen financiero -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+    <!-- Esperado vs contado -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-700 border-b pb-3 mb-4">Resumen financiero</h3>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-xs text-gray-500 uppercase border-b">
+                    <th class="py-2 text-left">Concepto</th>
+                    <th class="py-2 text-right">Esperado</th>
+                    <th class="py-2 text-right">Contado</th>
+                    <th class="py-2 text-right">Diferencia</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                <tr>
+                    <td class="py-3">Efectivo</td>
+                    <td class="py-3 text-right">${{ corte.efectivo_esperado }}</td>
+                    <td class="py-3 text-right">${{ corte.conteo_efectivo }}</td>
+                    <td class="py-3 text-right font-bold
+                        {% if corte.diferencia_efectivo < 0 %}text-red-600
+                        {% elif corte.diferencia_efectivo > 0 %}text-green-600
+                        {% else %}text-gray-600{% endif %}">
+                        {% if corte.diferencia_efectivo > 0 %}+{% endif %}${{ corte.diferencia_efectivo }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-3">Tarjeta</td>
+                    <td class="py-3 text-right">${{ corte.total_tarjeta }}</td>
+                    <td class="py-3 text-right">${{ corte.conteo_tarjeta }}</td>
+                    <td class="py-3 text-right font-bold
+                        {% if corte.diferencia_tarjeta < 0 %}text-red-600
+                        {% elif corte.diferencia_tarjeta > 0 %}text-green-600
+                        {% else %}text-gray-600{% endif %}">
+                        {% if corte.diferencia_tarjeta > 0 %}+{% endif %}${{ corte.diferencia_tarjeta }}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="py-3">Transferencia</td>
+                    <td class="py-3 text-right">${{ corte.total_transferencia }}</td>
+                    <td class="py-3 text-right">${{ corte.conteo_transferencia }}</td>
+                    <td class="py-3 text-right font-bold
+                        {% if corte.diferencia_transferencia < 0 %}text-red-600
+                        {% elif corte.diferencia_transferencia > 0 %}text-green-600
+                        {% else %}text-gray-600{% endif %}">
+                        {% if corte.diferencia_transferencia > 0 %}+{% endif %}${{ corte.diferencia_transferencia }}
+                    </td>
+                </tr>
+                <tr class="border-t-2 border-gray-300 font-bold text-gray-800">
+                    <td class="py-3">Total ventas</td>
+                    <td class="py-3 text-right" colspan="3">${{ corte.total_ventas }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Stats del turno -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-lg font-semibold text-gray-700 border-b pb-3 mb-4">Estadísticas del turno</h3>
+        <div class="space-y-4">
+            <div class="flex justify-between">
+                <span class="text-gray-600">Fondo inicial</span>
+                <span class="font-bold text-gray-800">${{ corte.fondo_inicial }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-600">Número de ventas</span>
+                <span class="font-bold text-gray-800">{{ corte.num_ventas }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-gray-600">Total del turno</span>
+                <span class="font-bold text-[#233b6e] text-lg">${{ corte.total_ventas }}</span>
+            </div>
+            {% if corte.notas %}
+            <div class="border-t pt-3">
+                <p class="text-xs text-gray-500 uppercase mb-1">Notas</p>
+                <p class="text-sm text-gray-700">{{ corte.notas }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Ventas del turno -->
+{% if ventas %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <h3 class="text-lg font-semibold text-gray-700 border-b pb-3 mb-4">
+        Ventas del turno ({{ ventas.count }})
+    </h3>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Folio</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Hora</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Descuento</th>
+                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for venta in ventas %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-4 text-sm font-bold text-[#233b6e]">#{{ venta.folio }}</td>
+                    <td class="px-4 py-2 text-sm text-gray-600">{{ venta.fecha|date:"H:i" }}</td>
+                    <td class="px-4 py-2 text-sm text-right text-gray-600">${{ venta.subtotal }}</td>
+                    <td class="px-4 py-2 text-sm text-right text-red-500">
+                        {% if venta.descuento > 0 %}-${{ venta.descuento }}{% else %}—{% endif %}
+                    </td>
+                    <td class="px-4 py-2 text-sm text-right font-bold">${{ venta.total }}</td>
+                    <td class="px-4 py-2 text-sm text-gray-600">{{ venta.get_metodo_pago_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

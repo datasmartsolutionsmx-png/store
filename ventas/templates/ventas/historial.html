@@ -1,0 +1,137 @@
+{% extends "core/base.html" %}
+{% block title %}Historial de Ventas{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 border-b-2 border-gray-200 pb-2">
+    <h2 class="text-3xl font-bold text-gray-800">Historial de Ventas</h2>
+    <a href="{% url 'ventas:punto_venta' %}"
+       class="bg-[#233b6e] text-white font-semibold py-2 px-4 rounded-lg hover:bg-[#1a2c53] transition-colors">
+        + Nueva venta
+    </a>
+    <a href="{% url 'reportes:dashboard' %}" class="text-sm text-[#233b6e] hover:underline">← Reportes</a>
+</div>
+
+<!-- Filtros -->
+<div class="mb-6 p-4 border rounded-lg bg-gray-50">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+            <input type="date" name="fecha_desde" value="{{ request.GET.fecha_desde }}"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+            <input type="date" name="fecha_hasta" value="{{ request.GET.fecha_hasta }}"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+            <select name="metodo_pago"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+                <option value="">Todos</option>
+                {% for val, label in metodos %}
+                <option value="{{ val }}" {% if request.GET.metodo_pago == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+            <select name="estado"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+                <option value="">Todos</option>
+                {% for val, label in estados %}
+                <option value="{{ val }}" {% if request.GET.estado == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="md:col-span-4 flex gap-2">
+            <button type="submit"
+                    class="bg-[#233b6e] text-white px-6 py-2 rounded-lg hover:bg-[#1a2c53] transition-colors">
+                🔍 Filtrar
+            </button>
+            <a href="{% url 'ventas:historial' %}"
+               class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                ✖ Limpiar
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla -->
+<div class="bg-white rounded-lg shadow-md overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+    <tr>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Folio</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+        {% if is_staff %}  <!-- ← Cambiado de max_perm >= 2 a is_staff -->
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cajero</th>
+        {% endif %}
+        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Descuento</th>
+        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Método</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+    </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for venta in page_obj %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-4 text-sm font-bold text-[#233b6e]">#{{ venta.folio }}</td>
+                <td class="px-4 py-4 text-sm text-gray-600">{{ venta.fecha|date:"d/m/Y H:i" }}</td>
+                {% if is_staff %}  
+                <td class="px-4 py-4 text-sm text-gray-600">{{ venta.usuario.get_full_name|default:venta.usuario.username }}</td>
+                {% endif %}
+                <td class="px-4 py-4 text-sm text-right text-gray-600">${{ venta.subtotal }}</td>
+                <td class="px-4 py-4 text-sm text-right text-red-500">
+                    {% if venta.descuento > 0 %}-${{ venta.descuento }}{% else %}—{% endif %}
+                </td>
+                <td class="px-4 py-4 text-sm text-right font-bold text-gray-900">${{ venta.total }}</td>
+                <td class="px-4 py-4 text-sm text-gray-600">{{ venta.get_metodo_pago_display }}</td>
+                <td class="px-4 py-4">
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full
+                        {% if venta.estado == 'completada' %}bg-green-100 text-green-800
+                        {% elif venta.estado == 'cancelada' %}bg-red-100 text-red-800
+                        {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                        {{ venta.get_estado_display }}
+                    </span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="px-6 py-10 text-center text-gray-400">
+                    No hay ventas registradas.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if page_obj.has_other_pages %}
+    <div class="flex justify-center mt-6 mb-4">
+        <nav class="inline-flex rounded-md shadow-sm -space-x-px">
+            {% if page_obj.has_previous %}
+            <a href="?page=1&fecha_desde={{ request.GET.fecha_desde }}&fecha_hasta={{ request.GET.fecha_hasta }}&metodo_pago={{ request.GET.metodo_pago }}&estado={{ request.GET.estado }}"
+               class="px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50">«</a>
+            <a href="?page={{ page_obj.previous_page_number }}&fecha_desde={{ request.GET.fecha_desde }}&fecha_hasta={{ request.GET.fecha_hasta }}&metodo_pago={{ request.GET.metodo_pago }}&estado={{ request.GET.estado }}"
+               class="px-3 py-2 border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50">‹</a>
+            {% endif %}
+            {% for i in page_obj.paginator.page_range %}
+                {% if page_obj.number == i %}
+                <span class="px-4 py-2 border border-gray-300 bg-[#233b6e] text-sm text-white">{{ i }}</span>
+                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                <a href="?page={{ i }}&fecha_desde={{ request.GET.fecha_desde }}&fecha_hasta={{ request.GET.fecha_hasta }}&metodo_pago={{ request.GET.metodo_pago }}&estado={{ request.GET.estado }}"
+                   class="px-4 py-2 border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50">{{ i }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}&fecha_desde={{ request.GET.fecha_desde }}&fecha_hasta={{ request.GET.fecha_hasta }}&metodo_pago={{ request.GET.metodo_pago }}&estado={{ request.GET.estado }}"
+               class="px-3 py-2 border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50">›</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}&fecha_desde={{ request.GET.fecha_desde }}&fecha_hasta={{ request.GET.fecha_hasta }}&metodo_pago={{ request.GET.metodo_pago }}&estado={{ request.GET.estado }}"
+               class="px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm text-gray-500 hover:bg-gray-50">»</a>
+            {% endif %}
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

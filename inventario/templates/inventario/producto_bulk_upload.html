@@ -1,0 +1,110 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Carga masiva de productos{% endblock %}
+
+{% block content %}
+<h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Inventario</h2>
+
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-md">
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="p-4 mb-4 rounded-lg
+            {% if message.tags == 'success' %}bg-green-100 border-l-4 border-green-500 text-green-700
+            {% else %}bg-red-100 border-l-4 border-red-500 text-red-700{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if not report_generated %}
+    <h3 class="text-xl font-semibold text-gray-700 mb-2">Paso 1: Sube tu archivo CSV</h3>
+    <p class="text-sm text-gray-500 mb-4">El archivo debe tener estos encabezados exactos:</p>
+    <code class="block bg-gray-100 text-sm p-3 rounded mb-6 text-gray-700">
+        nombre, descripcion, codigo_barra, sku, precio_compra, precio_venta, stock_inicial, stock_minimo, categoria, proveedor, activo
+    </code>
+
+    <div class="flex justify-end mb-4">
+        <a href="{% url 'inventario:download_template' %}"
+           class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+            📥 Descargar template
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="space-y-6 border p-6 rounded-lg bg-gray-50">
+        {% csrf_token %}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.csv_file.label }}</label>
+            <input type="file" name="csv_file" accept=".csv"
+                   class="block w-full text-sm text-gray-900 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:font-semibold file:bg-[#233b6e] file:text-white hover:file:bg-[#1a2c53]">
+            <p class="mt-1 text-xs text-gray-500">{{ form.csv_file.help_text }}</p>
+            {% if form.csv_file.errors %}
+            <p class="text-red-600 text-sm mt-1">{{ form.csv_file.errors }}</p>
+            {% endif %}
+        </div>
+        <div class="flex justify-end gap-4">
+            <a href="{% url 'inventario:producto_list' %}"
+               class="bg-gray-300 text-gray-800 font-semibold py-2 px-6 rounded-lg hover:bg-gray-400 transition-colors">
+                Cancelar
+            </a>
+            <button type="submit"
+                    class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg hover:bg-green-700 transition-colors">
+                Subir y procesar
+            </button>
+        </div>
+    </form>
+    {% endif %}
+
+    {% if report_generated %}
+    <h3 class="text-xl font-semibold text-gray-700 mb-4">Reporte de carga</h3>
+    <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="bg-gray-100 p-4 rounded-lg text-center">
+            <p class="text-2xl font-bold text-gray-800">{{ total_rows }}</p>
+            <p class="text-sm text-gray-500">Total filas</p>
+        </div>
+        <div class="bg-green-100 p-4 rounded-lg text-center">
+            <p class="text-2xl font-bold text-green-700">{{ successful_count }}</p>
+            <p class="text-sm text-green-600">Creados</p>
+        </div>
+        <div class="bg-red-100 p-4 rounded-lg text-center">
+            <p class="text-2xl font-bold text-red-700">{{ error_count }}</p>
+            <p class="text-sm text-red-600">Con error</p>
+        </div>
+    </div>
+
+    {% if errores %}
+    <h4 class="text-lg font-semibold text-red-600 mb-3 border-b pb-2">Detalle de errores</h4>
+    <div class="space-y-3 max-h-72 overflow-y-auto mb-6">
+        {% for record in errores %}
+        <div class="bg-red-50 border border-red-300 rounded p-3">
+            <p class="font-bold text-red-800 text-sm">Fila #{{ record.row }} — {{ record.data.nombre|default:'Sin nombre' }}</p>
+            <ul class="list-disc list-inside text-sm text-red-700 mt-1">
+                {% for field, msg in record.errors.items %}
+                <li>{{ field|capfirst }}: {{ msg }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if exitosos %}
+    <h4 class="text-lg font-semibold text-green-600 mb-3 border-b pb-2">Registros creados</h4>
+    <div class="max-h-48 overflow-y-auto border rounded bg-green-50 p-2 mb-6">
+        {% for record in exitosos %}
+        <div class="py-1 px-2 border-b border-green-200 text-sm text-green-800">
+            Fila #{{ record.row }}: {{ record.data.nombre }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="flex justify-end">
+        <a href="{% url 'inventario:producto_list' %}"
+           class="bg-[#233b6e] text-white font-semibold py-2 px-6 rounded-lg hover:bg-[#1a2c53] transition-colors">
+            Volver a productos
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

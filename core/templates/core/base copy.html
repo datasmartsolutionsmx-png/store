@@ -1,0 +1,131 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}STORE{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+
+
+<body class="bg-gray-100 font-sans">
+    <nav class="bg-[#233b6e] text-white shadow-md">
+        <div class="container mx-auto px-4 py-4 flex flex-wrap items-center justify-between">
+            
+            <!-- Logo (texto mientras no tengas SVG) -->
+            <a href="{% url 'dashboard' %}" class="flex items-center gap-2 text-2xl font-bold hover:bg-white/10 p-2 rounded-lg transition-all">
+<svg width="40" height="40" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Engrane (dientes) -->
+    <g stroke="#ffffff" stroke-width="8" stroke-linecap="round">
+        <line x1="100" y1="20" x2="100" y2="40" transform="rotate(0 100 100)"/>
+        <line x1="100" y1="20" x2="100" y2="40" transform="rotate(45 100 100)"/>
+        <line x1="100" y1="20" x2="100" y2="40" transform="rotate(90 100 100)"/>
+        <line x1="100" y1="20" x2="100" y2="40" transform="rotate(135 100 100)"/>
+        <line x1="100" y1="20" x2="100" y2="40" transform="rotate(180 100 100)"/>
+        <line x1="100" y1="20" x2="100" y2="40" transform="rotate(225 100 100)"/>
+        <line x1="100" y1="20" x2="100" y2="40" transform="rotate(270 100 100)"/>
+        <line x1="100" y1="20" x2="100" y2="40" transform="rotate(315 100 100)"/>
+    </g>
+    
+    <!-- Círculo interior del engrane -->
+    <circle cx="100" cy="100" r="45" stroke="#ffffff" stroke-width="8" fill="none"/>
+    
+    <!-- Computadora -->
+    <g transform="translate(70, 70)">
+        <rect x="15" y="40" width="60" height="8" rx="2" fill="#ffffff"/>
+        <rect x="10" y="10" width="50" height="35" rx="3" fill="#ffffff"/>
+        <line x1="18" y1="20" x2="52" y2="20" stroke="#233b6e" stroke-width="2"/>
+        <line x1="18" y1="28" x2="42" y2="28" stroke="#233b6e" stroke-width="2"/>
+        <line x1="18" y1="36" x2="32" y2="36" stroke="#233b6e" stroke-width="2"/>
+        <circle cx="52" cy="15" r="2" fill="#233b6e"/>
+    </g>
+</svg>
+                <span class="bg-white/20 px-3 py-1 rounded-lg">STORE</span>
+                <span class="hidden sm:inline">System</span>
+            </a>
+            
+
+            
+            <!-- Menú de usuario y hamburguesa -->
+            <div class="flex items-center gap-4">
+                <!-- Botón menú hamburguesa (móvil) -->
+                <div class="md:hidden flex flex-col space-y-1.5 cursor-pointer p-2 hover:bg-white/10 rounded-lg" id="hamburger-btn">
+                    <span class="w-6 h-0.5 bg-white"></span>
+                    <span class="w-6 h-0.5 bg-white"></span>
+                    <span class="w-6 h-0.5 bg-white"></span>
+                </div>
+                
+                <!-- Menú de usuario desktop -->
+                <div class="relative">
+                    <button id="user-menu-button" class="hidden md:flex items-center space-x-2 text-lg font-medium transition-all hover:bg-white/10 p-2 rounded-lg">
+                        <span>{{ user.first_name|default:user.username }}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    
+                    <!-- Dropdown desktop (oculto inicialmente) -->
+                    <div id="user-menu-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-md shadow-lg py-1 z-50">
+                        <a href="#perfil" class="flex items-center px-4 py-2 hover:bg-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>
+                            <span class="ml-2">Profile</span>   
+                        </a>
+                        <a href="{% url 'logout' %}" class="flex items-center px-4 py-2 hover:bg-gray-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                            <span class="ml-2">Logout</span>    
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Menú móvil (oculto por defecto) -->
+        <div id="mobile-menu" class="hidden md:hidden bg-[#233b6e] pb-4 px-4 text-center border-t border-gray-600">
+            <div class="py-4">
+                <input type="text" class="w-full bg-white/20 text-white rounded-full py-2 px-4 focus:outline-none" placeholder="Buscar...">
+            </div>
+            <div class="flex flex-col space-y-3">
+                <a href="#perfil" class="py-2 text-lg hover:bg-white/10 rounded-lg">Profile</a>
+                <a href="{% url 'logout' %}" class="py-2 text-lg hover:bg-white/10 rounded-lg">Logout</a>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Contenido principal -->
+    <main class="container mx-auto px-4 py-6">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <script>
+        // JavaScript para menú desplegable de usuario
+        document.addEventListener('DOMContentLoaded', function() {
+            const userMenuBtn = document.getElementById('user-menu-button');
+            const userDropdown = document.getElementById('user-menu-dropdown');
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            // Toggle menú desktop
+            if (userMenuBtn && userDropdown) {
+                userMenuBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    userDropdown.classList.toggle('hidden');
+                });
+                
+                // Cerrar al hacer clic fuera
+                document.addEventListener('click', function(e) {
+                    if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+                        userDropdown.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // Toggle menú móvil
+            if (hamburgerBtn && mobileMenu) {
+                hamburgerBtn.addEventListener('click', function() {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

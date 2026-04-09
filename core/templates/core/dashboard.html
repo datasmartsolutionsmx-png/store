@@ -1,0 +1,108 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-gray-200 pb-2">Dashboard</h2>
+
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+
+  <!-- Usuarios 
+  {% if permissions.usuarios > 0 %}
+  <a href="#" class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:bg-gray-50">
+    <div class="flex flex-col items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#233b6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      <h3 class="text-xl font-semibold text-gray-800 mt-2">Usuarios</h3>
+      <p class="text-gray-500 text-sm mt-1">{% if permissions.usuarios == 1 %}Solo lectura{% else %}Lectura y escritura{% endif %}</p>
+    </div>
+  </a>
+  {% endif %}-->
+
+  <!-- Ventas -->
+  {% if permissions.ventas > 0 %}
+  <a href="{% url 'ventas:punto_venta' %}" class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:bg-gray-50">
+    <div class="flex flex-col items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#233b6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 0 1-8 0"/>
+      </svg>
+      <h3 class="text-xl font-semibold text-gray-800 mt-2">Ventas</h3>
+      <p class="text-gray-500 text-sm mt-1">{% if permissions.ventas == 1 %}Solo lectura{% else %}Lectura y escritura{% endif %}</p>
+    </div>
+  </a>
+  {% endif %}
+
+  <!-- Inventario -->
+  {% if permissions.compras > 0 %}
+  <a href="{% url 'inventario:stock_list' %}" class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:bg-gray-50">
+    <div class="flex flex-col items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#233b6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-checks-icon lucide-list-checks"><path d="M13 5h8"/><path d="M13 12h8"/><path d="M13 19h8"/><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/></svg>
+      <h3 class="text-xl font-semibold text-gray-800 mt-2">Inventario</h3>
+      <p class="text-gray-500 text-sm mt-1">{% if permissions.compras == 1 %}Solo lectura{% else %}Lectura y escritura{% endif %}</p>
+    </div>
+  </a>
+  {% endif %}
+
+  
+    <!-- Inventario -->
+  {% if permissions.inventario > 0 %}
+  <a href="{% url 'inventario:producto_list' %}" class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:bg-gray-50">
+    <div class="flex flex-col items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#233b6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 22V2"/><path d="M4 12h16"/>
+        <path d="M4 20h16"/><path d="M4 2v20"/>
+        <path d="M4 4h16"/>
+        <path d="M12 12V9a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3"/>
+        <path d="M16 20v-3a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v3"/>
+      </svg>
+      <h3 class="text-xl font-semibold text-gray-800 mt-2">Productos</h3>
+      <p class="text-gray-500 text-sm mt-1">{% if permissions.inventario == 1 %}Solo lectura{% else %}Lectura y escritura{% endif %}</p>
+    </div>
+  </a>
+  {% endif %}
+
+  <!-- Ajustes Inventario -->
+  {% if permissions.inventario > 1 %}
+  <a href="{% url 'inventario:ajuste_inventario' %}" class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:bg-gray-50">
+    <div class="flex flex-col items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#233b6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-list-chevrons-down-up-icon lucide-list-chevrons-down-up"><path d="M3 5h8"/><path d="M3 12h8"/><path d="M3 19h8"/><path d="m15 5 3 3 3-3"/><path d="m15 19 3-3 3 3"/></svg>
+      <h3 class="text-xl font-semibold text-gray-800 mt-2">Ajustes Inventario</h3>
+      <p class="text-gray-500 text-sm mt-1">{% if permissions.inventario == 1 %}Solo lectura{% else %}Lectura y escritura{% endif %}</p>
+    </div>
+  </a>
+  {% endif %}
+
+
+  <!-- Reportes dashboard -->
+  {% if permissions.reportes > 1 %}
+  <a href= "{% url 'reportes:dashboard' %}" class="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 hover:bg-gray-50">
+    <div class="flex flex-col items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#233b6e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6"  y1="20" x2="6"  y2="14"/>
+      </svg>
+      <h3 class="text-xl font-semibold text-gray-800 mt-2">Reportes</h3>
+      <p class="text-gray-500 text-sm mt-1">{% if permissions.reportes == 1 %}Solo lectura{% else %}Lectura y escritura{% endif %}</p>
+    </div>
+  </a>
+  {% endif %}
+
+
+  <!-- Sin permisos -->
+  {% if permissions.ventas == 0 and permissions.compras == 0 and permissions.inventario == 0 and permissions.usuarios == 0 and permissions.reportes == 0 %}
+  <div class="col-span-full bg-red-100 border-2 border-red-400 text-red-700 px-6 py-5 rounded-lg mt-8 shadow text-center">
+    <h4 class="font-bold text-xl mb-2">⛔ Sin permisos asignados</h4>
+    <p class="text-base">No tienes permisos para acceder a ningún módulo. Contacta al administrador.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

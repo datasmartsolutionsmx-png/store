@@ -1,0 +1,16 @@
+@media print {
+    body {
+        margin: 0;
+        padding: 0;
+    }
+    
+    .no-print {
+        display: none;
+    }
+    
+    .ticket {
+        font-family: 'Courier New', monospace;
+        width: 80mm;
+        margin: 0 auto;
+    }
+}

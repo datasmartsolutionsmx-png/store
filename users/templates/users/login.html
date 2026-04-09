@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store | Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .django-form p {
+            margin-bottom: 1.25rem;
+        }
+
+        .django-form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+            font-weight: 500;
+        }
+
+        .django-form input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d2d6dc;
+            border-radius: 0.5rem;
+        }
+        
+        .django-form input:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #233b6e;
+        }
+        
+        .django-form input::placeholder {
+            color: #a0a7b4;
+        }
+        
+        /* Estilo para el contenedor del campo de contraseña */
+        .password-container {
+            position: relative;
+            width: 100%;
+        }
+        
+        .password-container input {
+            padding-right: 40px;
+        }
+        
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            color: #666;
+            transition: color 0.2s;
+        }
+        
+        .toggle-password:hover {
+            color: #233b6e;
+        }
+        
+        .toggle-password svg {
+            width: 20px;
+            height: 20px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+    <div class="bg-white p-8 md:p-10 rounded-xl shadow-lg w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">LOGIN STORE</h1>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="django-form">
+                {% for field in form %}
+                    {% if field.name == 'password' %}
+                        <div class="password-field">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            <div class="password-container">
+                                {{ field }}
+                                <span class="toggle-password" onclick="togglePasswordVisibility(this)">
+                                    <!-- Icono ojo cerrado (por defecto) -->
+                                    <svg class="eye-closed" viewBox="0 0 24 24">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                        <line x1="1" y1="1" x2="23" y2="23"/>
+                                    </svg>
+                                    <!-- Icono ojo abierto (oculto inicialmente) -->
+                                    <svg class="eye-open hidden" viewBox="0 0 24 24">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </div>
+                    {% else %}
+                        {{ field.label_tag }}
+                        {{ field }}
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            {% if form.errors %}
+            <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded" role="alert">
+                <p>{{ form.non_field_errors }}</p>
+            </div>
+            {% endif %}
+
+            <button type="submit" class="w-full bg-[#233b6e] text-white font-semibold py-3 rounded-lg hover:bg-[#1c305a] transition-colors duration-300 mt-2">
+                Login
+            </button>
+        </form>
+    </div>
+
+    <script>
+        function togglePasswordVisibility(element) {
+            const container = element.parentElement;
+            const passwordInput = container.querySelector('input');
+            const eyeClosed = element.querySelector('.eye-closed');
+            const eyeOpen = element.querySelector('.eye-open');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                eyeClosed.classList.add('hidden');
+                eyeOpen.classList.remove('hidden');
+            } else {
+                passwordInput.type = 'password';
+                eyeClosed.classList.remove('hidden');
+                eyeOpen.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+{% extends "core/base.html" %}
+{% block title %}Devoluciones - Registrar{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 border-b-2 border-gray-200 pb-2">
+    <h2 class="text-3xl font-bold text-gray-800">Registrar Devolución</h2>
+    <a href="{% url 'ventas:buscar_venta_devolucion' %}" 
+       class="text-sm text-[#233b6e] hover:underline font-medium">
+        ← Buscar otra venta
+    </a>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Información de la venta -->
+    <div class="lg:col-span-1">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Información de venta</h3>
+            
+            <div class="space-y-3">
+                <div>
+                    <p class="text-xs text-gray-500">Ticket</p>
+                    <p class="text-2xl font-bold text-[#233b6e]">#{{ venta.folio }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Fecha</p>
+                    <p class="text-sm">{{ venta.fecha|date:"d/m/Y H:i" }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Vendedor</p>
+                    <p class="text-sm">{{ venta.usuario.get_full_name|default:venta.usuario.username }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Método de pago</p>
+                    <p class="text-sm font-semibold 
+                        {% if venta.metodo_pago == 'efectivo' %}text-green-600
+                        {% elif venta.metodo_pago == 'tarjeta' %}text-blue-600
+                        {% else %}text-purple-600{% endif %}">
+                        {{ venta.get_metodo_pago_display }}
+                    </p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Total venta</p>
+                    <p class="text-xl font-bold text-gray-800">${{ venta.total|floatformat:2 }}</p>
+                </div>
+                {% if total_devuelto_anterior > 0 %}
+                <div>
+                    <p class="text-xs text-gray-500">Ya devuelto</p>
+                    <p class="text-lg font-bold text-red-600">-${{ total_devuelto_anterior|floatformat:2 }}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500">Saldo pendiente</p>
+                    <p class="text-lg font-bold text-orange-600">${{ venta.total|add:total_devuelto_anterior|floatformat:2 }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Productos a devolver -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-lg shadow-md">
+            <form method="post" action="{% url 'ventas:registrar_devolucion' venta.id %}">
+                {% csrf_token %}
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Vendido</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Ya devuelto</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Disponible</th>
+                                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">A devolver</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for item in detalles_con_disponibilidad %}
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-4 py-3 text-sm text-gray-900">
+                                    <p class="font-medium">{{ item.detalle.producto.nombre }}</p>
+                                    <p class="text-xs text-gray-400">${{ item.detalle.precio_unitario|floatformat:2 }} c/u</p>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-center">{{ item.detalle.cantidad }}</td>
+                                <td class="px-4 py-3 text-sm text-center text-red-600">{{ item.ya_devuelto }}</td>
+                                <td class="px-4 py-3 text-sm text-center text-green-600">{{ item.disponible }}</td>
+                                <td class="px-4 py-3 text-center">
+                                    <input type="number" 
+                                           name="cantidad_{{ item.detalle.id }}"
+                                           value="0"
+                                           min="0"
+                                           max="{{ item.disponible }}"
+                                           step="1"
+                                           class="input-cantidad w-20 text-center border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#233b6e]"
+                                           data-precio="{{ item.detalle.precio_unitario }}"
+                                           data-id="{{ item.detalle.id }}"
+                                           onchange="calcularTotal()">
+                                 </td>
+                                <td class="px-4 py-3 text-right text-sm subtotal-cell" id="subtotal_{{ item.detalle.id }}">$0.00</td>
+                             </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="bg-gray-50">
+                            <tr>
+                                <td colspan="5" class="px-4 py-3 text-right font-bold">Total a devolver:</td>
+                                <td class="px-4 py-3 text-right font-bold text-red-600 text-lg" id="total-devolver">$0.00</td>
+                             </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="p-4 border-t">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Motivo de la devolución</label>
+                        <textarea name="motivo" rows="2"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]"
+                                  placeholder="Ej: Producto defectuoso, error en compra, etc."></textarea>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button type="submit"
+                                class="flex-1 bg-red-600 text-white font-semibold py-3 rounded-lg hover:bg-red-700 transition-colors">
+                            ✅ Confirmar devolución
+                        </button>
+                        <a href="{% url 'ventas:buscar_venta_devolucion' %}"
+                           class="flex-1 bg-gray-500 text-white font-semibold py-3 rounded-lg hover:bg-gray-600 transition-colors text-center">
+                            Cancelar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function calcularTotal() {
+        let total = 0;
+        const inputs = document.querySelectorAll('.input-cantidad');
+        
+        inputs.forEach(input => {
+            const cantidad = parseInt(input.value) || 0;
+            const precio = parseFloat(input.dataset.precio);
+            const subtotal = cantidad * precio;
+            const detalleId = input.dataset.id;
+            const subtotalCell = document.getElementById(`subtotal_${detalleId}`);
+            if (subtotalCell) {
+                subtotalCell.textContent = `$${subtotal.toFixed(2)}`;
+            }
+            total += subtotal;
+        });
+        
+        const totalElement = document.getElementById('total-devolver');
+        if (totalElement) {
+            totalElement.textContent = `$${total.toFixed(2)}`;
+        }
+    }
+    
+    // Agregar event listeners cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.input-cantidad').forEach(input => {
+            input.addEventListener('input', calcularTotal);
+            input.addEventListener('change', calcularTotal);
+        });
+        calcularTotal();
+    });
+</script>
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Mostrar mensaje de éxito si viene de la vista
+    {% if messages %}
+        {% for message in messages %}
+            Swal.fire({
+                title: '{% if message.tags == "success" %}✅ Éxito{% else %}⚠️ Atención{% endif %}',
+                text: '{{ message }}',
+                icon: '{% if message.tags == "success" %}success{% else %}warning{% endif %}',
+                confirmButtonColor: '#233b6e',
+                timer: 3000,
+                timerProgressBar: true
+            });
+        {% endfor %}
+    {% endif %}
+</script>
+{% endblock %}

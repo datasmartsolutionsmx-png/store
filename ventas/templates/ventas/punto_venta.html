@@ -1,0 +1,828 @@
+{% extends "core/base.html" %}
+{% load static %}
+{% block title %}Punto de Venta{% endblock %}
+
+{% block content %}
+
+<div class="flex items-center justify-between mb-6 border-b-2 border-gray-200 pb-2">
+    <h2 class="text-3xl font-bold text-gray-800">Punto de Venta</h2>
+    <div class="flex items-center gap-4">
+        <span class="text-xs text-gray-500">
+            🏦 Caja abierta desde {{ corte.fecha_apertura|date:"H:i" }} 
+            — Fondo: ${{ corte.fondo_inicial }}
+        </span>
+        <a href="{% url 'ventas:historial' %}"
+           class="text-sm text-[#233b6e] hover:underline font-medium">
+            📋 Historial
+        </a>
+        <a href="{% url 'ventas:buscar_venta_devolucion' %}"
+            class="text-sm text-orange-600 hover:underline font-medium">
+            ↩️ Devoluciones
+        </a>
+        <a href="{% url 'ventas:cerrar_caja' %}"
+           class="bg-red-600 text-white text-sm font-semibold py-2 px-4 rounded-lg hover:bg-red-700 transition-colors">
+            🔒 Cerrar caja
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Columna izquierda: buscador + carrito -->
+    <div class="lg:col-span-2 space-y-4">
+
+        <!-- Buscador -->
+        <div class="bg-white p-4 rounded-lg shadow-md relative">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+                Buscar producto por código de barra o nombre
+            </label>
+            <div class="flex gap-2 relative">
+                <div class="flex-1 relative">
+                    <input type="text" id="busqueda"
+                        placeholder="Escanea o escribe el código / nombre..."
+                        autofocus
+                        class="w-full px-4 py-3 border-2 border-[#233b6e] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e] text-lg">
+                    <!-- Sugerencias -->
+                    <div id="sugerencias" class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                </div>
+                <button onclick="buscarProducto()"
+                        class="bg-[#233b6e] text-white px-6 py-3 rounded-lg hover:bg-[#1a2c53] transition-colors font-semibold">
+                    Agregar
+                </button>
+            </div>
+            <p id="error-busqueda" class="text-red-600 text-sm mt-2 hidden"></p>
+        </div>
+
+        <!-- Carrito -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200" id="tabla-carrito">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Cantidad (PZ/gr)</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio unit.</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Disponible</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Quitar</th>
+                        </tr>
+                    </thead>
+                    <tbody id="filas-carrito" class="bg-white divide-y divide-gray-200">
+                        <!-- Fila vacía se insertará dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna derecha: resumen y pago -->
+    <div class="space-y-4">
+        <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
+            <h3 class="text-lg font-semibold text-gray-700 border-b pb-2">Resumen</h3>
+
+            <div class="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span id="resumen-subtotal" class="font-medium">$0.00</span>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Descuento ($)</label>
+                <input type="number" id="descuento" min="0" step="0.01" value="0"
+                       oninput="actualizarTotales()"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+            </div>
+
+            <div class="flex justify-between text-xl font-bold text-gray-800 border-t pt-3">
+                <span>Total</span>
+                <span id="resumen-total" class="text-[#233b6e]">$0.00</span>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+                <select id="metodo-pago" onchange="toggleEfectivoModal()"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+                    <option value="efectivo">Efectivo</option>
+                    <option value="tarjeta">Tarjeta</option>
+                    <option value="transferencia">Transferencia</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notas (opcional)</label>
+                <textarea id="notas" rows="2"
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]"
+                          placeholder="Observaciones de la venta..."></textarea>
+            </div>
+
+            <button id="btn-vender" disabled
+                    class="w-full py-4 rounded-lg font-bold text-lg transition-colors bg-gray-300 text-gray-500 cursor-not-allowed">
+                💰 Vender
+            </button>
+
+            <button onclick="limpiarCarrito()"
+                    class="w-full py-2 rounded-lg font-medium text-sm text-red-600 border border-red-300 hover:bg-red-50 transition-colors">
+                🗑️ Limpiar carrito
+            </button>
+        </div>
+
+        <div id="alertas-stock" class="space-y-2 hidden"></div>
+    </div>
+</div>
+
+<!-- Modal de pago en efectivo -->
+<div id="modal-efectivo" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4 shadow-xl">
+        <div class="text-center mb-6">
+            <div class="text-5xl mb-2">💵</div>
+            <h3 class="text-2xl font-bold text-gray-800">Pago en Efectivo</h3>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="bg-gray-100 p-4 rounded-lg">
+                <p class="text-sm text-gray-600">Total a pagar</p>
+                <p class="text-3xl font-bold text-[#233b6e]" id="modal-total-pagar">$0.00</p>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Cantidad recibida</label>
+                <input type="number" id="efectivo-recibido" step="0.01" min="0"
+                       class="w-full px-4 py-3 text-2xl border-2 border-[#233b6e] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e] text-right"
+                       placeholder="0.00"
+                       oninput="calcularCambio()">
+            </div>
+            
+            <div id="cambio-container" class="hidden bg-green-50 p-4 rounded-lg border-2 border-green-300">
+                <p class="text-sm text-green-700 font-semibold">Cambio a devolver</p>
+                <p class="text-2xl font-bold text-green-700" id="cambio-cantidad">$0.00</p>
+            </div>
+            
+            <div class="flex gap-3 pt-4">
+                <button onclick="cerrarModalEfectivo()"
+                        class="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                    Cancelar
+                </button>
+                <button onclick="confirmarPagoEfectivo()"
+                        class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors">
+                    Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal éxito con opción de imprimir -->
+<div id="modal-exito" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-8 max-w-2xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div class="text-center mb-6">
+            <div class="text-6xl mb-4">✅</div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">¡Venta registrada!</h3>
+            <p class="text-gray-600">Folio: <span id="modal-folio" class="font-bold text-[#233b6e]"></span></p>
+            <p class="text-gray-600">Total: <span id="modal-total" class="font-bold text-[#233b6e] text-xl"></span></p>
+        </div>
+        
+        <div id="ticket-contenido" class="border-t border-b border-gray-200 py-4 my-4">
+            <!-- Aquí se generará el ticket -->
+        </div>
+        
+        <div id="modal-alertas" class="text-left mb-4 space-y-1"></div>
+        
+        <div class="flex gap-3">
+            <button onclick="imprimirTicket()"
+                    class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">
+                🖨️ Imprimir Ticket
+            </button>
+            <button onclick="cerrarModal()"
+                    class="flex-1 bg-[#233b6e] text-white font-bold py-3 rounded-lg hover:bg-[#1a2c53] transition-colors">
+                Nueva venta
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let carrito = [];
+    let ultimaVentaData = null;
+
+    // Configuración de la tienda
+    
+    // Configuración de la tienda desde el contexto de Django
+    const tiendaConfig = {
+        nombre: "{{ user_tienda.nombre|default:'MI STORE' }}",
+        direccion: "{{ user_tienda.direccion|default:'Dirección de la tienda' }}",
+        telefono: "{{ user_tienda.telefono|default:'123-456-7890' }}",
+        email: "{{ user_tienda.email|default:'tienda@email.com' }}",
+        logo: "{% if user_tienda.logo %}{{ user_tienda.logo.url }}{% else %}{% static 'ventas/img/logo.png' %}{% endif %}"
+    };
+
+    // ── Inicializar ────────────────────────────────────────
+    function init() {
+        renderCarrito();
+        // Evento Enter en buscador
+        document.getElementById('busqueda').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') buscarProducto();
+        });
+        // Delegación de eventos
+        document.getElementById('filas-carrito').addEventListener('click', function(e) {
+            const btnCantidad = e.target.closest('.btn-cantidad');
+            const btnQuitar   = e.target.closest('.btn-quitar');
+
+            if (btnCantidad) {
+                const idx   = parseInt(btnCantidad.dataset.idx);
+                const delta = parseInt(btnCantidad.dataset.delta);
+                cambiarCantidad(idx, delta);
+            }
+
+            if (btnQuitar) {
+                const idx = parseInt(btnQuitar.dataset.idx);
+                eliminarItem(idx);
+            }
+        });
+        
+        // Delegación para cambios en inputs de cantidad
+        document.getElementById('filas-carrito').addEventListener('change', function(e) {
+            const inputCantidad = e.target.closest('.input-cantidad');
+            if (inputCantidad) {
+                const idx = parseInt(inputCantidad.dataset.idx);
+                const nuevaCantidad = parseFloat(inputCantidad.value);
+                actualizarCantidadManual(idx, nuevaCantidad);
+            }
+        });
+        
+        // Evento botón vender
+        document.getElementById('btn-vender').addEventListener('click', procesarVenta);
+    }
+
+    // ── Mostrar/ocultar modal de efectivo ─────────────────
+    function toggleEfectivoModal() {
+        const metodo = document.getElementById('metodo-pago').value;
+        // No hacemos nada automático, solo preparamos
+    }
+
+    function mostrarModalEfectivo() {
+        const total = document.getElementById('resumen-total').textContent;
+        document.getElementById('modal-total-pagar').textContent = total;
+        document.getElementById('efectivo-recibido').value = '';
+        document.getElementById('cambio-container').classList.add('hidden');
+        document.getElementById('modal-efectivo').classList.remove('hidden');
+        document.getElementById('efectivo-recibido').focus();
+    }
+
+    function calcularCambio() {
+        const totalText = document.getElementById('resumen-total').textContent;
+        const total = parseFloat(totalText.replace('$', ''));
+        const recibido = parseFloat(document.getElementById('efectivo-recibido').value) || 0;
+        
+        if (recibido >= total && recibido > 0) {
+            const cambio = recibido - total;
+            document.getElementById('cambio-cantidad').textContent = `$${cambio.toFixed(2)}`;
+            document.getElementById('cambio-container').classList.remove('hidden');
+        } else {
+            document.getElementById('cambio-container').classList.add('hidden');
+        }
+    }
+
+    function cerrarModalEfectivo() {
+        document.getElementById('modal-efectivo').classList.add('hidden');
+    }
+
+    function confirmarPagoEfectivo() {
+        const totalText = document.getElementById('resumen-total').textContent;
+        const total = parseFloat(totalText.replace('$', ''));
+        const recibido = parseFloat(document.getElementById('efectivo-recibido').value) || 0;
+        
+        if (recibido < total) {
+            mostrarError(`El efectivo recibido ($${recibido.toFixed(2)}) es insuficiente. Total: $${total.toFixed(2)}`);
+            return;
+        }
+        
+        cerrarModalEfectivo();
+        procesarVentaConEfectivo(recibido);
+    }
+
+    // ── Buscar producto ────────────────────────────────────
+    function buscarProducto() {
+        const query = document.getElementById('busqueda').value.trim();
+        if (!query) return;
+
+        const url = "{% url 'ventas:buscar_producto' %}?q=" + encodeURIComponent(query);
+        
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    mostrarError(data.error);
+                    return;
+                }
+                agregarAlCarrito(data);
+                document.getElementById('busqueda').value = '';
+                ocultarError();
+            })
+            .catch(() => mostrarError('Error de conexión'));
+    }
+     
+    // ── Autocompletado ─────────────────────────────────────
+    let timeoutSugerencias = null;
+
+    function buscarSugerencias() {
+        const query = document.getElementById('busqueda').value.trim();
+        const sugerenciasDiv = document.getElementById('sugerencias');
+        
+        if (query.length < 2) {
+            sugerenciasDiv.classList.add('hidden');
+            return;
+        }
+        
+        const url = "{% url 'ventas:buscar_producto_sugerencias' %}?q=" + encodeURIComponent(query);
+        
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error || !data.productos || data.productos.length === 0) {
+                    sugerenciasDiv.classList.add('hidden');
+                    return;
+                }
+                
+                sugerenciasDiv.innerHTML = '';
+                data.productos.forEach(producto => {
+                    const item = document.createElement('div');
+                    item.className = 'p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 flex justify-between items-center';
+                    item.innerHTML = `
+                        <div>
+                            <p class="font-medium text-gray-800">${escapeHtml(producto.nombre)}</p>
+                            <p class="text-xs text-gray-500">Código: ${escapeHtml(producto.codigo_barra || 'N/A')}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-[#233b6e]">$${producto.precio_venta.toFixed(2)}</p>
+                            <p class="text-xs text-gray-500">Stock: ${producto.stock}</p>
+                        </div>
+                    `;
+                    item.addEventListener('click', () => {
+                        agregarAlCarrito(producto);
+                        document.getElementById('busqueda').value = '';
+                        sugerenciasDiv.classList.add('hidden');
+                        ocultarError();
+                    });
+                    sugerenciasDiv.appendChild(item);
+                });
+                sugerenciasDiv.classList.remove('hidden');
+            })
+            .catch(() => {
+                console.error('Error al buscar sugerencias');
+            });
+    }
+    
+    // Evento input para sugerencias
+    document.getElementById('busqueda').addEventListener('input', function() {
+        if (timeoutSugerencias) clearTimeout(timeoutSugerencias);
+        timeoutSugerencias = setTimeout(buscarSugerencias, 300);
+    });
+    
+    // Ocultar sugerencias al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        const busqueda = document.getElementById('busqueda');
+        const sugerencias = document.getElementById('sugerencias');
+        if (!busqueda.contains(e.target) && !sugerencias.contains(e.target)) {
+            sugerencias.classList.add('hidden');
+        }
+    });
+
+    // ── Agregar al carrito ─────────────────────────────────
+    function agregarAlCarrito(producto) {
+        const precioVenta = parseFloat(producto.precio_venta);
+        const stock = parseInt(producto.stock);
+        
+        const existente = carrito.find(i => i.id === producto.id);
+        if (existente) {
+            if (existente.cantidad >= stock) {
+                mostrarError(`Stock máximo disponible: ${stock}`);
+                return;
+            }
+            existente.cantidad++;
+        } else {
+            carrito.push({
+                id:           producto.id,
+                nombre:       producto.nombre,
+                codigo_barra: producto.codigo_barra || '',
+                precio_venta: precioVenta,
+                stock:        stock,
+                stock_minimo: producto.stock_minimo || 0,
+                cantidad:     1,
+            });
+        }
+        renderCarrito();
+    }
+
+    // ── Renderizar tabla con cantidad editable ─────────────────
+    function renderCarrito() {
+        const tbody = document.getElementById('filas-carrito');
+        
+        if (!tbody) return;
+
+        if (carrito.length === 0) {
+            tbody.innerHTML = `
+                <tr id="fila-vacia">
+                    <td colspan="6" class="px-6 py-10 text-center text-gray-400">
+                        <p class="text-lg">🛒 El carrito está vacío</p>
+                        <p class="text-sm mt-1">Busca o escanea un producto para comenzar</p>
+                    </td>
+                </tr>
+            `;
+            actualizarTotales();
+            return;
+        }
+
+        tbody.innerHTML = '';
+
+        carrito.forEach((item, idx) => {
+            const subtotal   = item.cantidad * item.precio_venta;
+            const disponible = item.stock - item.cantidad;
+
+            let estadoColor;
+            if (disponible <= 0) {
+                estadoColor = 'bg-red-100 text-red-700';
+            } else if (disponible <= item.stock_minimo) {
+                estadoColor = 'bg-amber-100 text-amber-700';
+            } else {
+                estadoColor = 'bg-green-100 text-green-700';
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50 transition-colors';
+            tr.innerHTML = `
+                <td class="px-4 py-3 text-sm text-gray-900">
+                    <p class="font-medium">${escapeHtml(item.nombre)}</p>
+                    <p class="text-xs text-gray-400">${escapeHtml(item.codigo_barra)}</p>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button data-idx="${idx}" data-delta="-1"
+                                class="btn-cantidad w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 font-bold text-gray-700 transition-colors">−</button>
+                        <input type="number" 
+                               data-idx="${idx}"
+                               value="${item.cantidad}"
+                               step="0.01"
+                               min="0"
+                               max="${item.stock}"
+                               class="input-cantidad w-20 text-center border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#233b6e] font-semibold">
+                        <button data-idx="${idx}" data-delta="1"
+                                class="btn-cantidad w-7 h-7 rounded-full bg-gray-200 hover:bg-gray-300 font-bold text-gray-700 transition-colors">+</button>
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-right text-sm text-gray-600">$${item.precio_venta.toFixed(2)}</td>
+                <td class="px-4 py-3 text-right text-sm font-semibold text-gray-900">$${subtotal.toFixed(2)}</td>
+                <td class="px-4 py-3 text-center">
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full ${estadoColor}">
+                        ${disponible}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <button data-idx="${idx}"
+                            class="btn-quitar text-red-500 hover:text-red-700 transition-colors text-lg font-bold">✕</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        actualizarTotales();
+    }
+
+    // ── Actualizar cantidad manual desde input ──────────────
+    function actualizarCantidadManual(idx, nuevaCantidad) {
+        if (!carrito[idx]) return;
+        
+        // Validar que sea un número válido
+        if (isNaN(nuevaCantidad) || nuevaCantidad < 0) {
+            mostrarError('La cantidad debe ser un número válido mayor o igual a 0.');
+            renderCarrito(); // Re-renderizar para restaurar valor anterior
+            return;
+        }
+        
+        const item = carrito[idx];
+        
+        // Validar stock máximo
+        if (nuevaCantidad > item.stock) {
+            mostrarError(`Stock máximo disponible: ${item.stock}`);
+            renderCarrito(); // Re-renderizar para restaurar valor anterior
+            return;
+        }
+        
+        // Si la cantidad es 0, eliminar el item
+        if (nuevaCantidad === 0) {
+            eliminarItem(idx);
+            return;
+        }
+        
+        // Actualizar cantidad
+        item.cantidad = nuevaCantidad;
+        renderCarrito();
+    }
+
+    // ── Cambiar cantidad con botones +/─ ───────────────────
+    function cambiarCantidad(idx, delta) {
+        if (!carrito[idx]) return;
+        
+        const item = carrito[idx];
+        const nueva = item.cantidad + delta;
+        
+        if (nueva <= 0) {
+            eliminarItem(idx);
+            return;
+        }
+        if (nueva > item.stock) {
+            mostrarError(`Stock máximo disponible: ${item.stock}`);
+            return;
+        }
+        item.cantidad = nueva;
+        renderCarrito();
+    }
+
+    function eliminarItem(idx) {
+        carrito.splice(idx, 1);
+        renderCarrito();
+    }
+
+    function limpiarCarrito() {
+        if (carrito.length === 0) return;
+        if (!confirm('¿Limpiar el carrito?')) return;
+        carrito = [];
+        renderCarrito();
+        document.getElementById('descuento').value = '0';
+        document.getElementById('notas').value = '';
+    }
+
+    // ── Totales ────────────────────────────────────────────
+    function actualizarTotales() {
+        const subtotal = carrito.reduce((s, i) => s + (i.cantidad * i.precio_venta), 0);
+        const descuento = parseFloat(document.getElementById('descuento').value) || 0;
+        const total = Math.max(0, subtotal - descuento);
+
+        document.getElementById('resumen-subtotal').textContent = `$${subtotal.toFixed(2)}`;
+        document.getElementById('resumen-total').textContent = `$${total.toFixed(2)}`;
+
+        const btn = document.getElementById('btn-vender');
+        if (carrito.length > 0) {
+            btn.disabled = false;
+            btn.className = 'w-full py-4 rounded-lg font-bold text-lg transition-colors bg-green-600 text-white hover:bg-green-700 cursor-pointer';
+        } else {
+            btn.disabled = true;
+            btn.className = 'w-full py-4 rounded-lg font-bold text-lg transition-colors bg-gray-300 text-gray-500 cursor-not-allowed';
+        }
+    }
+
+    // ── Procesar venta ─────────────────────────────────────
+    function procesarVenta() {
+        const metodo = document.getElementById('metodo-pago').value;
+        
+        if (metodo === 'efectivo') {
+            mostrarModalEfectivo();
+        } else {
+            procesarVentaConEfectivo(null);
+        }
+    }
+
+    function procesarVentaConEfectivo(efectivoRecibido) {
+        if (carrito.length === 0) return;
+
+        const descuento = parseFloat(document.getElementById('descuento').value) || 0;
+        const subtotal = carrito.reduce((s, i) => s + (i.cantidad * i.precio_venta), 0);
+
+        if (descuento > subtotal) {
+            mostrarError('El descuento no puede ser mayor al subtotal.');
+            return;
+        }
+
+        const payload = {
+            carrito: carrito.map(i => ({ id: i.id, cantidad: i.cantidad })),
+            metodo_pago: document.getElementById('metodo-pago').value,
+            descuento: descuento,
+            notas: document.getElementById('notas').value,
+        };
+        
+        if (efectivoRecibido !== null) {
+            payload.efectivo_recibido = efectivoRecibido;
+        }
+
+        const btnVender = document.getElementById('btn-vender');
+        btnVender.disabled = true;
+        btnVender.textContent = 'Procesando...';
+
+        fetch("{% url 'ventas:procesar_venta' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: JSON.stringify(payload),
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                mostrarError(data.error);
+                btnVender.disabled = false;
+                btnVender.textContent = '💰 Vender';
+                return;
+            }
+            if (data.ok) {
+                ultimaVentaData = data;
+                mostrarModalExito(data);
+                btnVender.disabled = false;
+                btnVender.textContent = '💰 Vender';
+            } else {
+                mostrarError('Error al procesar la venta');
+                btnVender.disabled = false;
+                btnVender.textContent = '💰 Vender';
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            mostrarError('Error de conexión al procesar la venta.');
+            btnVender.disabled = false;
+            btnVender.textContent = '💰 Vender';
+        });
+    }
+
+    // ── Generar ticket HTML ─────────────────────────────────
+    function generarTicketHTML(ventaData) {
+    const fecha = new Date().toLocaleString();
+    const total = ventaData.total;
+    const cambio = ventaData.cambio;
+    
+    // Calcular subtotal y descuento
+    const subtotal = carrito.reduce((s, i) => s + (i.cantidad * i.precio_venta), 0);
+    const descuento = parseFloat(document.getElementById('descuento').value) || 0;
+    
+    let html = `
+        <div class="font-mono text-sm" style="font-family: monospace;">
+            <div class="text-center mb-4">
+                ${tiendaConfig.logo ? `<img src="${tiendaConfig.logo}" style="max-height: 60px; margin: 0 auto;" alt="Logo">` : ''}
+                <h3 class="font-bold text-lg" style="font-weight: bold; font-size: 1.125rem;">${tiendaConfig.nombre}</h3>
+                <p class="text-xs" style="font-size: 0.75rem;">${tiendaConfig.direccion}</p>
+                <p class="text-xs" style="font-size: 0.75rem;">Tel: ${tiendaConfig.telefono}</p>
+                <p class="text-xs" style="font-size: 0.75rem;">${tiendaConfig.email}</p>
+                <hr style="margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;">
+                <p class="text-xs" style="font-size: 0.75rem;">Ticket: #${ventaData.venta_id}</p>
+                <p class="text-xs" style="font-size: 0.75rem;">Fecha: ${fecha}</p>
+                <p class="text-xs" style="font-size: 0.75rem;">Vendedor: {{ request.user.username }}</p>
+                <hr style="margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;">
+            </div>
+            
+            <div class="mb-4">
+                <table class="w-full text-xs" style="width: 100%; font-size: 0.75rem; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <th class="text-left py-1" style="text-align: left; padding: 4px 0;">Cant</th>
+                            <th class="text-left py-1" style="text-align: left; padding: 4px 0;">Producto</th>
+                            <th class="text-right py-1" style="text-align: right; padding: 4px 0;">Precio</th>
+                            <th class="text-right py-1" style="text-align: right; padding: 4px 0;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    
+    carrito.forEach(item => {
+        html += `
+            <tr>
+                <td class="py-1" style="padding: 4px 0;">${item.cantidad}</td>
+                <td class="py-1" style="padding: 4px 0;">${escapeHtml(item.nombre)}</td>
+                <td class="text-right py-1" style="text-align: right; padding: 4px 0;">$${item.precio_venta.toFixed(2)}</td>
+                <td class="text-right py-1" style="text-align: right; padding: 4px 0;">$${(item.cantidad * item.precio_venta).toFixed(2)}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td colspan="3" class="text-right py-1 font-bold" style="text-align: right; padding: 4px 0; font-weight: bold;">Subtotal:</td>
+                            <td class="text-right py-1" style="text-align: right; padding: 4px 0;">$${subtotal.toFixed(2)}</td>
+                        </tr>
+                        ${descuento > 0 ? `
+                        <tr>
+                            <td colspan="3" class="text-right py-1" style="text-align: right; padding: 4px 0;">Descuento:</td>
+                            <td class="text-right py-1" style="text-align: right; padding: 4px 0;">-$${descuento.toFixed(2)}</td>
+                        </tr>
+                        ` : ''}
+                        <tr style="border-top: 1px solid #e5e7eb;">
+                            <td colspan="3" class="text-right py-1 font-bold text-base" style="text-align: right; padding: 4px 0; font-weight: bold; font-size: 0.875rem;">TOTAL:</td>
+                            <td class="text-right py-1 font-bold text-base" style="text-align: right; padding: 4px 0; font-weight: bold; font-size: 0.875rem;">$${total.toFixed(2)}</td>
+                        </tr>
+                        ${cambio ? `
+                        <tr>
+                            <td colspan="3" class="text-right py-1" style="text-align: right; padding: 4px 0;">Efectivo:</td>
+                            <td class="text-right py-1" style="text-align: right; padding: 4px 0;">$${((total + cambio)).toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="text-right py-1" style="text-align: right; padding: 4px 0;">Cambio:</td>
+                            <td class="text-right py-1" style="text-align: right; padding: 4px 0;">$${cambio.toFixed(2)}</td>
+                        </tr>
+                        ` : ''}
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="text-center text-xs mt-4" style="text-align: center; font-size: 0.75rem; margin-top: 1rem;">
+                <hr style="margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;">
+                <p>¡Gracias por su compra!</p>
+                <p class="text-xs mt-2" style="font-size: 0.75rem; margin-top: 0.5rem;">Método de pago: ${document.getElementById('metodo-pago').options[document.getElementById('metodo-pago').selectedIndex].text}</p>
+                ${document.getElementById('notas').value ? `<p class="text-xs mt-2" style="font-size: 0.75rem; margin-top: 0.5rem;">Notas: ${escapeHtml(document.getElementById('notas').value)}</p>` : ''}
+                <hr style="margin: 8px 0; border: none; border-top: 1px solid #e5e7eb;">
+                <p class="text-xs" style="font-size: 0.75rem;">Sistema de Punto de Venta</p>
+            </div>
+        </div>
+    `;
+    
+    return html;
+    }
+
+    function imprimirTicket() {
+        const ticketContent = document.getElementById('ticket-contenido').innerHTML;
+        const ventana = window.open('', '_blank');
+        ventana.document.write(`
+            <html>
+                <head>
+                    <title>Ticket de Venta #${ultimaVentaData.venta_id}</title>
+                    <style>
+                        body {
+                            font-family: monospace;
+                            padding: 20px;
+                            margin: 0;
+                        }
+                        @media print {
+                            body {
+                                padding: 0;
+                                margin: 0;
+                            }
+                            button {
+                                display: none;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${ticketContent}
+                    <div class="text-center mt-4">
+                        <button onclick="window.print()" style="padding: 10px 20px; margin: 10px; cursor: pointer;">🖨️ Imprimir</button>
+                        <button onclick="window.close()" style="padding: 10px 20px; margin: 10px; cursor: pointer;">❌ Cerrar</button>
+                    </div>
+                </body>
+            </html>
+        `);
+        ventana.document.close();
+    }
+
+    // ── Modal éxito ────────────────────────────────────────
+    function mostrarModalExito(data) {
+        document.getElementById('modal-folio').textContent = `#${data.venta_id}`;
+        document.getElementById('modal-total').textContent = `$${data.total.toFixed(2)}`;
+        
+        // Generar ticket
+        const ticketHTML = generarTicketHTML(data);
+        document.getElementById('ticket-contenido').innerHTML = ticketHTML;
+
+        const modalAlertas = document.getElementById('modal-alertas');
+        if (data.alertas && data.alertas.length > 0) {
+            modalAlertas.innerHTML = data.alertas.map(a =>
+                `<p class="text-amber-700 bg-amber-50 border border-amber-300 rounded px-3 py-2 text-sm">${escapeHtml(a)}</p>`
+            ).join('');
+        } else {
+            modalAlertas.innerHTML = '<p class="text-green-600">✅ Venta completada exitosamente</p>';
+        }
+
+        document.getElementById('modal-exito').classList.remove('hidden');
+    }
+
+    function cerrarModal() {
+        document.getElementById('modal-exito').classList.add('hidden');
+        carrito = [];
+        document.getElementById('descuento').value = '0';
+        document.getElementById('notas').value = '';
+        document.getElementById('metodo-pago').value = 'efectivo';
+        renderCarrito();
+        document.getElementById('busqueda').focus();
+    }
+
+    // ── Helpers ────────────────────────────────────────────
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function mostrarError(msg) {
+        const el = document.getElementById('error-busqueda');
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        setTimeout(() => ocultarError(), 4000);
+    }
+
+    function ocultarError() {
+        const el = document.getElementById('error-busqueda');
+        if (el) el.classList.add('hidden');
+    }
+
+    // Inicializar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', init);
+</script>
+{% endblock %}

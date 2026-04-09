@@ -1,0 +1,115 @@
+{% extends "core/base.html" %}
+{% block title %}Reporte de ventas{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 border-b-2 border-gray-200 pb-2">
+    <h2 class="text-3xl font-bold text-gray-800">Reporte de ventas</h2>
+    <a href="{% url 'reportes:dashboard' %}" class="text-sm text-[#233b6e] hover:underline">← Reportes</a>
+</div>
+
+<!-- Filtros -->
+<div class="mb-6 p-4 border rounded-lg bg-gray-50">
+    <form method="get" class="flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+            <input type="date" name="fecha_desde" value="{{ fecha_desde }}"
+                   class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+            <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}"
+                   class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Método de pago</label>
+            <select name="metodo_pago"
+                    class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+                <option value="">Todos</option>
+                {% for val, label in metodos %}
+                <option value="{{ val }}" {% if metodo_pago == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex gap-2">
+            <button type="submit"
+                    class="bg-[#233b6e] text-white px-6 py-2 rounded-lg hover:bg-[#1a2c53] transition-colors">
+                🔍 Filtrar
+            </button>
+            <a href="{% url 'reportes:ventas' %}"
+               class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                ✖ Limpiar
+            </a>
+            <a href="?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&metodo_pago={{ metodo_pago }}&export=csv"
+               class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                📥 Exportar CSV
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Tarjetas totales -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-4 rounded-lg shadow-md text-center border-t-4 border-[#233b6e]">
+        <p class="text-xs text-gray-500 uppercase mb-1">Total ventas</p>
+        <p class="text-2xl font-bold text-[#233b6e]">${{ totales.total_ventas|default:0|floatformat:2 }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow-md text-center border-t-4 border-green-500">
+        <p class="text-xs text-gray-500 uppercase mb-1">Efectivo</p>
+        <p class="text-2xl font-bold text-green-600">${{ totales.efectivo|default:0|floatformat:2 }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow-md text-center border-t-4 border-blue-500">
+        <p class="text-xs text-gray-500 uppercase mb-1">Tarjeta</p>
+        <p class="text-2xl font-bold text-blue-600">${{ totales.tarjeta|default:0|floatformat:2 }}</p>
+    </div>
+    <div class="bg-white p-4 rounded-lg shadow-md text-center border-t-4 border-purple-500">
+        <p class="text-xs text-gray-500 uppercase mb-1">Transferencia</p>
+        <p class="text-2xl font-bold text-purple-600">${{ totales.transferencia|default:0|floatformat:2 }}</p>
+    </div>
+</div>
+
+<!-- Tabla por día -->
+<div class="bg-white rounded-lg shadow-md overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Num. ventas</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Efectivo</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Tarjeta</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Transferencia</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total día</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for row in ventas_por_dia %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-3 text-sm font-medium text-gray-800">{{ row.dia|date:"d/m/Y" }}</td>
+                <td class="px-4 py-3 text-sm text-center text-gray-600">{{ row.count }}</td>
+                <td class="px-4 py-3 text-sm text-right text-green-600">${{ row.efectivo_dia|default:0|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-sm text-right text-blue-600">${{ row.tarjeta_dia|default:0|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-sm text-right text-purple-600">${{ row.transferencia_dia|default:0|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-sm text-right font-bold text-gray-900">${{ row.total_dia|default:0|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="px-6 py-10 text-center text-gray-400">
+                    No hay ventas en el período seleccionado.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if ventas_por_dia %}
+        <tfoot class="bg-gray-50 font-bold">
+            <tr>
+                <td class="px-4 py-3 text-sm text-gray-700">Total período</td>
+                <td class="px-4 py-3 text-sm text-center text-gray-700">{{ totales.num_ventas }}</td>
+                <td class="px-4 py-3 text-sm text-right text-green-700">${{ totales.efectivo|default:0|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-sm text-right text-blue-700">${{ totales.tarjeta|default:0|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-sm text-right text-purple-700">${{ totales.transferencia|default:0|floatformat:2 }}</td>
+                <td class="px-4 py-3 text-sm text-right text-[#233b6e]">${{ totales.total_ventas|default:0|floatformat:2 }}</td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+</div>
+{% endblock %}

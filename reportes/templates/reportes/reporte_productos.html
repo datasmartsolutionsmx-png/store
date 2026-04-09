@@ -1,0 +1,75 @@
+{% extends "core/base.html" %}
+{% block title %}Productos más vendidos{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-between mb-6 border-b-2 border-gray-200 pb-2">
+    <h2 class="text-3xl font-bold text-gray-800">Productos más vendidos</h2>
+    <a href="{% url 'reportes:dashboard' %}" class="text-sm text-[#233b6e] hover:underline">← Reportes</a>
+</div>
+
+<!-- Filtros -->
+<div class="mb-6 p-4 border rounded-lg bg-gray-50">
+    <form method="get" class="flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+            <input type="date" name="fecha_desde" value="{{ fecha_desde }}"
+                   class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+            <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}"
+                   class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#233b6e]">
+        </div>
+        <div class="flex gap-2">
+            <button type="submit"
+                    class="bg-[#233b6e] text-white px-6 py-2 rounded-lg hover:bg-[#1a2c53] transition-colors">
+                🔍 Filtrar
+            </button>
+            <a href="{% url 'reportes:productos' %}"
+               class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                ✖ Limpiar
+            </a>
+            <a href="?fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}&export=csv"
+               class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                📥 Exportar CSV
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla -->
+<div class="bg-white rounded-lg shadow-md overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">#</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Código</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Precio venta</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Unidades vendidas</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Num. ventas</th>
+                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total ingresos</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for p in productos %}
+            <tr class="hover:bg-gray-50 transition-colors">
+                <td class="px-4 py-3 text-sm text-center text-gray-500">{{ forloop.counter }}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ p.producto__nombre }}</td>
+                <td class="px-4 py-3 text-sm text-gray-500">{{ p.producto__codigo_barra|default:"—" }}</td>
+                <td class="px-4 py-3 text-sm text-right text-gray-600">${{ p.producto__precio_venta }}</td>
+                <td class="px-4 py-3 text-sm text-right font-bold text-[#233b6e]">{{ p.total_vendido }}</td>
+                <td class="px-4 py-3 text-sm text-right text-gray-600">{{ p.num_ventas }}</td>
+                <td class="px-4 py-3 text-sm text-right font-bold text-green-600">${{ p.total_ingresos|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="px-6 py-10 text-center text-gray-400">
+                    No hay ventas en el período seleccionado.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
