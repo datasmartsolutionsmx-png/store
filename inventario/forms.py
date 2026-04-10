@@ -1,5 +1,5 @@
 from django import forms
-from .models import Producto, Categoria, Proveedor
+from .models import Producto, Categoria, Proveedor,Tienda
 
 
 class ProductoForm(forms.ModelForm):
@@ -17,7 +17,10 @@ class ProductoForm(forms.ModelForm):
 
 
 class CsvUploadForm(forms.Form):
-    csv_file = forms.FileField(
-        label='Archivo CSV',
-        help_text='El archivo debe contener encabezados: nombre, descripcion, codigo_barra, sku, precio_compra, precio_venta, categoria, proveedor, activo'
+    csv_file = forms.FileField(label='Archivo CSV')
+    tienda = forms.ModelChoiceField(
+        queryset=Tienda.objects.filter(activa=True),
+        required=False,
+        label='Tienda (solo para superusuario)',
+        help_text='Si eres superusuario, selecciona la tienda destino. Si no, se usará tu tienda.'
     )

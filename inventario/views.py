@@ -196,15 +196,27 @@ def producto_delete(request, pk):
 
 @login_required
 def producto_bulk_upload(request):
-    # Solo superusuario
+    # Solo superusuario puede hacer carga masiva
     if not request.user.is_superuser:
-        messages.error(request, 'Solicite al superusuario realizar la carga masiva.')
+        messages.error(request, 'Solo el superusuario puede realizar la carga masiva.')
         return redirect('inventario:producto_list')
 
     if request.method == 'POST':
         form = CsvUploadForm(request.POST, request.FILES)
         if form.is_valid():
             csv_file = request.FILES['csv_file']
+            
+            # Determinar la tienda destino
+            tienda_id = request.POST.get('tienda')
+            if tienda_id:
+                from tiendas.models import Tienda
+                tienda_destino = Tienda.objects.get(id=tienda_id)
+            else:
+                tienda_destino = request.user.tienda
+            
+            if not tienda_destino:
+                messages.error(request, 'No se pudo determinar la tienda destino. Selecciona una tienda en el formulario.')
+                return redirect('inventario:producto_bulk_upload')
 
             try:
                 data_set = csv_file.read().decode('UTF-8')
@@ -213,7 +225,7 @@ def producto_bulk_upload(request):
                 data_set = csv_file.read().decode('ISO-8859-1')
 
             io_string = io.StringIO(data_set)
-            reader    = csv.DictReader(io_string)
+            reader = csv.DictReader(io_string)
 
             # Limpiar BOM y espacios en encabezados
             if reader.fieldnames:
@@ -222,13 +234,12 @@ def producto_bulk_upload(request):
                     for k in reader.fieldnames
                 ]
 
-            # Mapas para FK
-            tienda_actual = get_tienda_actual(request.user) or Tienda.objects.first()
-            cat_map  = {c.nombre.lower(): c for c in Categoria.objects.filter(tienda=tienda_actual)}
-            prov_map = {p.nombre.lower(): p for p in Proveedor.objects.filter(tienda=tienda_actual)}
+            # Mapas para FK (filtrados por tienda destino)
+            cat_map = {c.nombre.lower(): c for c in Categoria.objects.filter(tienda=tienda_destino)}
+            prov_map = {p.nombre.lower(): p for p in Proveedor.objects.filter(tienda=tienda_destino)}
 
             exitosos = []
-            errores  = []
+            errores = []
 
             for i, row in enumerate(reader, start=1):
                 row = {k: v.strip() for k, v in row.items()}
@@ -273,19 +284,19 @@ def producto_bulk_upload(request):
 
                 if errores_fila:
                     errores.append({
-                        'row':    i,
-                        'data':   row,
+                        'row': i,
+                        'data': row,
                         'errors': {'validación': ', '.join(errores_fila)}
                     })
                     continue
 
-                # Resolver FK — si no existe la categoría/proveedor la crea automáticamente
+                # Resolver FK — si no existe la categoría/proveedor, la crea automáticamente en la tienda destino
                 categoria = cat_map.get(row.get('categoria', '').lower())
                 if not categoria and row.get('categoria'):
                     categoria = Categoria.objects.create(
                         nombre=row['categoria'].strip(),
                         activa=True,
-                        tienda=tienda_actual
+                        tienda=tienda_destino
                     )
                     cat_map[row['categoria'].lower()] = categoria
 
@@ -294,87 +305,92 @@ def producto_bulk_upload(request):
                     proveedor = Proveedor.objects.create(
                         nombre=row['proveedor'].strip(),
                         activo=True,
-                        tienda=tienda_actual
+                        tienda=tienda_destino
                     )
                     prov_map[row['proveedor'].lower()] = proveedor
 
-                # Verificar si el producto ya existe por código de barra o SKU
+                # Verificar si el producto ya existe por código de barra o SKU en la misma tienda
                 codigo_barra = row.get('codigo_barra') or None
-                sku          = row.get('sku') or None
-                existe       = False
+                sku = row.get('sku') or None
+                existe = False
 
                 if codigo_barra:
-                    existe = Producto.objects.filter(codigo_barra=codigo_barra, tienda=tienda_actual).exists()
+                    existe = Producto.objects.filter(codigo_barra=codigo_barra, tienda=tienda_destino).exists()
                 elif sku:
-                    existe = Producto.objects.filter(sku=sku, tienda=tienda_actual).exists()
+                    existe = Producto.objects.filter(sku=sku, tienda=tienda_destino).exists()
 
                 if existe:
                     errores.append({
-                        'row':    i,
-                        'data':   row,
-                        'errors': {'duplicado': f'Ya existe un producto con código "{codigo_barra or sku}"'}
+                        'row': i,
+                        'data': row,
+                        'errors': {'duplicado': f'Ya existe un producto con código "{codigo_barra or sku}" en esta tienda'}
                     })
                     continue
 
                 try:
                     with transaction.atomic():
                         producto = Producto.objects.create(
-                            nombre        = row.get('nombre', ''),
-                            descripcion   = row.get('descripcion', ''),
-                            codigo_barra  = codigo_barra,
-                            sku           = sku,
-                            precio_compra = precio_compra,
-                            precio_venta  = precio_venta,
-                            stock         = stock_inicial,
-                            stock_minimo  = stock_minimo,
-                            categoria     = categoria,
-                            proveedor     = proveedor,
-                            activo        = row.get('activo', 'true').lower() != 'false',
-                            creado_por    = request.user,
-                            tienda        = tienda_actual,
+                            nombre=row.get('nombre', ''),
+                            descripcion=row.get('descripcion', ''),
+                            codigo_barra=codigo_barra,
+                            sku=sku,
+                            precio_compra=precio_compra,
+                            precio_venta=precio_venta,
+                            stock=stock_inicial,
+                            stock_minimo=stock_minimo,
+                            categoria=categoria,
+                            proveedor=proveedor,
+                            activo=row.get('activo', 'true').lower() != 'false',
+                            creado_por=request.user,
+                            tienda=tienda_destino,
                         )
 
                         # Registrar movimiento de stock si hay stock inicial
                         if stock_inicial > 0:
                             MovimientoStock.objects.create(
-                                producto       = producto,
-                                tipo           = 'entrada',
-                                cantidad       = stock_inicial,
-                                stock_anterior = 0,
-                                stock_nuevo    = stock_inicial,
-                                motivo         = 'Carga inicial de inventario',
-                                usuario        = request.user,
-                                tienda         = tienda_actual,
+                                producto=producto,
+                                tipo='entrada',
+                                cantidad=stock_inicial,
+                                stock_anterior=0,
+                                stock_nuevo=stock_inicial,
+                                motivo='Carga inicial de inventario',
+                                usuario=request.user,
+                                tienda=tienda_destino,
                             )
 
                     exitosos.append({'row': i, 'data': row})
 
                 except Exception as e:
                     errores.append({
-                        'row':    i,
-                        'data':   row,
+                        'row': i,
+                        'data': row,
                         'errors': {'error': str(e)}
                     })
 
             messages.success(
                 request,
-                f'{len(exitosos)} productos cargados exitosamente.'
+                f'{len(exitosos)} productos cargados exitosamente en la tienda "{tienda_destino.nombre}".'
             )
 
             return render(request, 'inventario/producto_bulk_upload.html', {
-                'form':             CsvUploadForm(),
+                'form': CsvUploadForm(),
                 'report_generated': True,
-                'total_rows':       len(exitosos) + len(errores),
+                'total_rows': len(exitosos) + len(errores),
                 'successful_count': len(exitosos),
-                'error_count':      len(errores),
-                'exitosos':         exitosos,
-                'errores':          errores,
+                'error_count': len(errores),
+                'exitosos': exitosos,
+                'errores': errores,
             })
     else:
         form = CsvUploadForm()
-
-    return render(request, 'inventario/producto_bulk_upload.html', {'form': form})
-
+        context = {'form': form}
+        
+        # Si es superusuario, pasar lista de tiendas para el selector
+        if request.user.is_superuser:
+            from tiendas.models import Tienda
+            context['tiendas'] = Tienda.objects.filter(activa=True)
+        
+        return render(request, 'inventario/producto_bulk_upload.html', context)
 
 @login_required
 def download_template_producto(request):
