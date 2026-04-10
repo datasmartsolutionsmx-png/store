@@ -2,7 +2,7 @@ services:
   - type: web
     name: store
     runtime: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     startCommand: python manage.py migrate && gunicorn store_project.wsgi:application
     envVars:
       - key: DATABASE_URL
@@ -18,11 +18,13 @@ services:
       - key: PYTHON_VERSION
         value: 3.10.0
       - key: CLOUDINARY_CLOUD_NAME
-        value: tu_cloud_name
+        value: dsf50ge9w
       - key: CLOUDINARY_API_KEY
-        value: tu_api_key
+        value: 637785451297246
       - key: CLOUDINARY_API_SECRET
-        value: tu_api_secret
+        value: tEizIbwPMdh0rCXQbGiSvfIsnsA
+      - key: CLOUDINARY_URL
+        value: cloudinary://637785451297246:tEizIbwPMdh0rCXQbGiSvfIsnsA@dsf50ge9w
 
 databases:
   - name: store_db
