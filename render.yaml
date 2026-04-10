@@ -3,7 +3,7 @@ services:
     name: store
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn store_project.wsgi:application
+    startCommand: python manage.py migrate && gunicorn store_project.wsgi:application
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -17,6 +17,12 @@ services:
         value: .onrender.com
       - key: PYTHON_VERSION
         value: 3.10.0
+      - key: CLOUDINARY_CLOUD_NAME
+        value: tu_cloud_name
+      - key: CLOUDINARY_API_KEY
+        value: tu_api_key
+      - key: CLOUDINARY_API_SECRET
+        value: tu_api_secret
 
 databases:
   - name: store_db
