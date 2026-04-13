@@ -207,13 +207,12 @@
     
     // Configuración de la tienda desde el contexto de Django
     const tiendaConfig = {
-        nombre: "{{ user_tienda.nombre|default:'MI STORE' }}",
-        direccion: "{{ user_tienda.direccion|default:'Dirección de la tienda' }}",
-        telefono: "{{ user_tienda.telefono|default:'123-456-7890' }}",
-        email: "{{ user_tienda.email|default:'tienda@email.com' }}",
-        logo: "{{ user_tienda.logo.url|default:'/static/ventas/img/logo.png' }}"
+        nombre: "{{ user_tienda.nombre|default:'MI STORE'|escapejs }}",
+        direccion: "{{ user_tienda.direccion|default:'Dirección de la tienda'|escapejs }}",
+        telefono: "{{ user_tienda.telefono|default:'123-456-7890'|escapejs }}",
+        email: "{{ user_tienda.email|default:'tienda@email.com'|escapejs }}",
+        logo: "{% if user_tienda.logo %}{{ user_tienda.logo.url }}{% else %}/static/ventas/img/logo.png{% endif %}"
     };
-
     // ── Inicializar ────────────────────────────────────────
     function init() {
         renderCarrito();

@@ -27,10 +27,12 @@ def user_role(request):
     return {'permissions': permissions, 'roles': roles}
 
 
-from tiendas.models import Tienda
-
 def tienda_context(request):
     """Agrega la tienda del usuario al contexto global"""
-    if request.user.is_authenticated and hasattr(request.user, 'tienda'):
-        return {'user_tienda': request.user.tienda}
+    if request.user.is_authenticated:
+        # Si el usuario tiene tienda asignada
+        if hasattr(request.user, 'tienda') and request.user.tienda:
+            return {'user_tienda': request.user.tienda}
+        # Si no tiene tienda (superuser o usuario sin tienda)
+        return {'user_tienda': None}
     return {'user_tienda': None}
