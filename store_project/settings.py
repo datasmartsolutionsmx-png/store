@@ -179,3 +179,8 @@ if 'CLOUDINARY_CLOUD_NAME' in os.environ:
 
     # Carpeta base para archivos subidos
     CLOUDINARY_STORAGE['BASE_URL'] = '/LOGOS_POS/'
+
+    # Debug de Cloudinary
+print(f"CLOUDINARY_CLOUD_NAME está en os.environ: {'CLOUDINARY_CLOUD_NAME' in os.environ}")
+if 'CLOUDINARY_CLOUD_NAME' in os.environ:
+    print(f"CLOUDINARY_CLOUD_NAME = {os.environ.get('CLOUDINARY_CLOUD_NAME')}")
