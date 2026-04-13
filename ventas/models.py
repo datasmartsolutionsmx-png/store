@@ -95,6 +95,7 @@ class CorteCaja(models.Model):
     ]
 
     tienda = models.ForeignKey(Tienda, on_delete=models.PROTECT, null=True, blank=True)
+    folio = models.IntegerField(default=0)
     usuario          = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     fecha_apertura   = models.DateTimeField(auto_now_add=True)
     fecha_cierre     = models.DateTimeField(null=True, blank=True)
@@ -122,6 +123,7 @@ class CorteCaja(models.Model):
 
     class Meta:
         ordering = ['-fecha_apertura']
+        unique_together = ['tienda', 'folio']
         verbose_name = 'Corte de caja'
         verbose_name_plural = 'Cortes de caja'
 
@@ -131,3 +133,10 @@ class CorteCaja(models.Model):
     @property
     def efectivo_esperado(self):
         return self.fondo_inicial + self.total_efectivo
+    
+def generar_folio_corte(tienda):
+    """Genera el siguiente folio de corte para una tienda"""
+    from .models import CorteCaja
+    ultimo_corte = CorteCaja.objects.filter(tienda=tienda).aggregate(max_folio=Max('folio'))
+    siguiente = (ultimo_corte['max_folio'] or 0) + 1
+    return siguiente
