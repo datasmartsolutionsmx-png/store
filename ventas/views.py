@@ -8,7 +8,7 @@ from django.db import models as db_models
 import json
 from decimal import Decimal
 from django.utils import timezone
-from .models import Venta, DetalleVenta, CorteCaja, Devolucion,DetalleDevolucion
+from .models import Venta, DetalleVenta, CorteCaja, Devolucion,DetalleDevolucion,generar_folio_corte
 
 from users.models import UserRole
 from inventario.models import Producto
@@ -317,7 +317,7 @@ def abrir_caja(request):
             usuario       = request.user,
             fondo_inicial = fondo_inicial,
             tienda        = request.user.tienda, 
-            folio         = generar_folio_corte(request.user.tienda),
+            folio         = generar_folio_corte(request.user.tienda)
         )
         messages.success(request, f'Caja abierta con fondo inicial de ${fondo_inicial:.2f}')
         return redirect('ventas:punto_venta')
