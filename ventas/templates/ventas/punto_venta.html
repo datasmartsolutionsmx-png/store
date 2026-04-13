@@ -211,7 +211,7 @@
         direccion: "{{ user_tienda.direccion|default:'Dirección de la tienda' }}",
         telefono: "{{ user_tienda.telefono|default:'123-456-7890' }}",
         email: "{{ user_tienda.email|default:'tienda@email.com' }}",
-        logo: "{% if user_tienda.logo %}{{ user_tienda.logo.url }}{% else %}{% static 'ventas/img/logo.png' %}{% endif %}"
+        logo: "{{ user_tienda.logo.url|default:'/static/ventas/img/logo.png' }}"
     };
 
     // ── Inicializar ────────────────────────────────────────
