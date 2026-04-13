@@ -176,11 +176,8 @@ if 'CLOUDINARY_CLOUD_NAME' in os.environ:
         'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
     }
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-
-    # Carpeta base para archivos subidos
-    CLOUDINARY_STORAGE['BASE_URL'] = '/LOGOS_POS/'
-
+    
     # Debug de Cloudinary
-print(f"CLOUDINARY_CLOUD_NAME está en os.environ: {'CLOUDINARY_CLOUD_NAME' in os.environ}")
-if 'CLOUDINARY_CLOUD_NAME' in os.environ:
-    print(f"CLOUDINARY_CLOUD_NAME = {os.environ.get('CLOUDINARY_CLOUD_NAME')}")
+    print(f"Cloudinary activado para {os.environ.get('CLOUDINARY_CLOUD_NAME')}")
+else:
+    print("Cloudinary NO activado - variables faltantes")
