@@ -168,8 +168,8 @@ if 'DATABASE_URL' in os.environ:
         'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
     }
 
-# Configuración para archivos media (Cloudinary - solo en producción)
-if 'CLOUDINARY_URL' in os.environ:
+# Configuración para archivos media (Cloudinary)
+if 'CLOUDINARY_CLOUD_NAME' in os.environ:
     CLOUDINARY_STORAGE = {
         'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
         'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
